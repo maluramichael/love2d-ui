@@ -21,6 +21,10 @@ function Widget:new(x, y, width, height)
   self.parent = nil
   self.isPressed = false
   self.isHovered = false
+
+  self.actions = {
+    pressed = function() end
+  }
 end
 
 function Widget:__toString()
@@ -28,33 +32,34 @@ function Widget:__toString()
 end
 
 function Widget:onMouseEnter()
-  print("onMouseEnter", self:__toString())
+  -- print("onMouseEnter", self:__toString())
   self.isHovered = true
 end
 
 function Widget:onMouseLeave()
-  print("onMouseLeave", self:__toString())
+  -- print("onMouseLeave", self:__toString())
   self.isHovered = false
   self.isPressed = false
 end
 
 function Widget:onMouseMove()
-  print("onMouseMove", self:__toString())
+  -- print("onMouseMove", self:__toString())
 end
 
 function Widget:onMouseDown(button, mx, my)
-  print("onMouseDown", self:__toString(), button, mx, my)
+  -- print("onMouseDown", self:__toString(), button, mx, my)
   self.isHovered = true
   self.isPressed = true
 end
 
 function Widget:onMousePressed(button, mx, my)
-  print("onMousePressed", self:__toString(), button, mx, my)
+  -- print("onMousePressed", self:__toString(), button, mx, my)
   self.isPressed = true
+  self.actions.pressed(self, button, mx, my)
 end
 
 function Widget:onMouseReleased(button, mx, my)
-  print("onMouseReleased", self:__toString(), button, mx, my)
+  -- print("onMouseReleased", self:__toString(), button, mx, my)
   self.isPressed = false
 end
 
@@ -187,6 +192,12 @@ end
 
 function Container:cleanDirtyFlag()
   Container.super.cleanDirtyFlag(self)
+
+  if self.elements then
+    for _, element in ipairs(self.elements) do
+      element:cleanDirtyFlag()
+    end
+  end
 end
 
 function Container:addElement(element)
@@ -211,9 +222,6 @@ function StackLayout:new(horizontal)
 end
 
 function StackLayout:cleanDirtyFlag()
-  StackLayout.super.cleanDirtyFlag(self)
-
-  print("StackLayout cleanDirtyFlag")
 
   self:setLocation(self.parent:getLocation())
   self:setDimensions(self.parent:getDimensions())
@@ -235,6 +243,9 @@ function StackLayout:cleanDirtyFlag()
       element.y = (_ - 1) * chunkSize
     end
   end
+
+  StackLayout.super.cleanDirtyFlag(self)
+
 end
 
 function StackLayout:draw()

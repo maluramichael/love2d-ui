@@ -7,3 +7,6 @@
 [submodule "thirdparty/hump"]
 	path = thirdparty/hump
 	url = git@github.com:vrld/hump.git
+[submodule "thirdparty/lume"]
+	path = thirdparty/lume
+	url = git@github.com:rxi/lume.git

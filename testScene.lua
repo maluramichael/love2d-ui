@@ -6,25 +6,19 @@ function scene:init()
   love.graphics.setFont(fonts.monospace[26])
   self.ui = UI.UI()
   self.ui.visible = true
-  self.stack = self.ui:addElement(UI.StackLayout())
-  self.stack:addElement(UI.Button("Button 1 in StackLayout", 100, 300, 300, 200))
-  self.stack:addElement(UI.Button("Button 2 in StackLayout", 100, 300, 300, 200))
+  local stack = self.ui:addElement(UI.StackLayout())
+  stack:addElement(UI.Button("Button 1 in StackLayout", 100, 300, 300, 200))
+  local button = stack:addElement(UI.Button("Button 2 in StackLayout", 100, 300, 300, 200))
 
-  -- self.stack:addElement(UI.Button("Button 2 in StackLayout"))
-  -- self.stack:addElement(UI.Button("Button 3 in StackLayout"))
+  stack:addElement(UI.Button("Button 3 in StackLayout"))
 
   self.ui:addElement(UI.Button("Lowest", 25, 75, 300, 50))
   self.ui:addElement(UI.Button("Below", 50, 50, 300, 50))
   self.ui:addElement(UI.Button("Above", 100, 75, 300, 50))
 
-  -- self.stack:addElement(UI.Button("Foo"))
-  -- self.stack:addElement(UI.Button("Bar"))
-  -- buildButton.style.background = colors.darkGray
-  -- buildButton.hoverStyle.background = colors.lightGray
-  -- buildButton.style.text = colors.white
-  -- buildButton.pressed = function()
-  --   self:buildHarbor()
-  -- end
+  button.actions.pressed = function(sender, button, mx, my)
+    print(sender:__toString().." pressed")
+  end
 
   self.ui:print()
 
