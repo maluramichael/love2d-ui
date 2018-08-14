@@ -6,19 +6,20 @@ function scene:init()
   love.graphics.setFont(fonts.monospace[26])
   self.ui = UI.UI()
   self.ui.visible = true
-  local stack = self.ui:addElement(UI.StackLayout())
-  stack:addElement(UI.Button("Button 1 in StackLayout", 100, 300, 300, 200))
-  local button = stack:addElement(UI.Button("Button 2 in StackLayout", 100, 300, 300, 200))
 
-  stack:addElement(UI.Button("Button 3 in StackLayout"))
+  local stackA = self.ui:addElement(UI.StackLayout(true))
+  local stackB = self.ui:addElement(UI.StackLayout())
+  stackA.tag = "stackA"
+  stackB.tag = "stackB"
 
-  self.ui:addElement(UI.Button("Lowest", 25, 75, 300, 50))
-  self.ui:addElement(UI.Button("Below", 50, 50, 300, 50))
-  self.ui:addElement(UI.Button("Above", 100, 75, 300, 50))
+  local container = stackB:addElement(UI.Container())
+  local innerContainer = container:addElement(UI.Container(50, 40, 200, 300))
+  container.tag = "container"
+  innerContainer.tag = "inner container"
+  innerContainer:addElement(UI.Button("Hello", 30, 50, 100, 50))
+  innerContainer:addElement(UI.Button("!!Overflow!!", 60, 120, 200, 50))
 
-  button.actions.pressed = function(sender, button, mx, my)
-    print(sender:__toString().." pressed")
-  end
+  self.ui:addElement(UI.Button("HUGE BUTTON"))
 
   self.ui:print()
 

@@ -2,10 +2,26 @@ local Object = require("thirdparty.classic.classic")
 
 local Widget = Object:extend()
 local Container = Widget:extend()
+local Layout = Container:extend()
 local Button = Widget:extend()
 
 local UI = Container:extend()
-local StackLayout = Container:extend()
+local StackLayout = Layout:extend()
+
+string.lpad = function(str, len, char)
+  if char == nil then
+    char = " "
+  end
+  return str .. string.rep(char, len - #str)
+end
+
+--- Pads str to length len with char from left
+string.rpad = function(str, len, char)
+  if char == nil then
+    char = " "
+  end
+  return string.rep(char, len - #str) .. str
+end
 
 --[[
   ******************************************************************
@@ -17,13 +33,15 @@ function Widget:new(x, y, width, height)
   self.y = y or 0
   self.width = width or 0
   self.height = height or 0
-  self.isDirty = false
+  self.isDirty = true
   self.parent = nil
   self.isPressed = false
   self.isHovered = false
+  self.tag = nil
 
   self.actions = {
-    pressed = function() end
+    pressed = function()
+    end
   }
 end
 
@@ -104,7 +122,16 @@ function Widget:print(level)
   for i = 1, level do
     pad = pad .. "-"
   end
-  print(pad .. self:__toString())
+  local sx, sy = self:toScreenCoordinates()
+  print(
+    (pad .. self:__toString()):lpad(50),
+    "x: " .. self.x,
+    "y: " .. self.y,
+    "sx: " .. sx,
+    "sy: " .. sy,
+    "w: " .. self.width,
+    "h: " .. self.height
+  )
 
   if self.elements then
     for k, v in pairs(self.elements) do
@@ -115,22 +142,17 @@ end
 
 function Widget:toScreenCoordinates()
   if self.parent then
-    local px, py = self.parent:toScreenCoordinates()
-    return self.x + px, self.y + py
+    local sx, sy = self.parent:toScreenCoordinates()
+    return self.x + sx, self.y + sy
   end
-  return 0, 0
+  return self.x, self.y
 end
 
 function Widget:findElement(mx, my)
-  if self.elements then
-    for _ = #self.elements, 1, -1 do
-      local foundElement = self.elements[_]:findElement(mx, my)
-      if foundElement then
-        return foundElement
-      end
-    end
-  end
+  -- print("[FINDELEMENT] " .. self:__toString(), self.x, self.y, self.width, self.height)
   local wx, wy = self:toScreenCoordinates()
+  -- print((self:__toString()):lpad(50), wx, wy)
+
   if mx >= wx and my >= wy and mx <= wx + self.width and my <= wy + self.height then
     return self
   else
@@ -148,15 +170,35 @@ end
 
 --[[
   ******************************************************************
+  Layout
+  ******************************************************************
+--]]
+function Layout:new(x, y, width, height)
+  Layout.super.new(self, x, y, width, height)
+end
+
+function Layout:__toString()
+  return "Layout"
+end
+
+function Layout:updateLayout(parentDimensions)
+end
+
+--[[
+  ******************************************************************
   Container
   ******************************************************************
 --]]
-function Container:new()
-  Container.super.new(self)
+function Container:new(x, y, width, height)
+  Container.super.new(self, x, y, width, height)
+  self.isDirty = true
   self.elements = {}
 end
 
 function Container:__toString()
+  if self.tag then
+    return "Container [" .. self.tag .. "]"
+  end
   return "Container"
 end
 
@@ -168,6 +210,21 @@ function Container:update(dt)
       element:update(dt)
     end
   end
+end
+
+function Container:findElement(mx, my)
+  -- print("[FINDELEMENT] " .. self:__toString())
+  local hitContainer = Container.super.findElement(self, mx, my)
+  if hitContainer then
+    for _ = #self.elements, 1, -1 do
+      local foundElement = self.elements[_]:findElement(mx, my)
+      if foundElement then
+        return foundElement
+      end
+    end
+  end
+
+  return hitContainer
 end
 
 function Container:cleanDirtyFlag()
@@ -190,21 +247,97 @@ function Container:setDirty()
   end
 end
 
-function Container:cleanDirtyFlag()
-  Container.super.cleanDirtyFlag(self)
+function Container:addElement(element)
+  local hasALayout = #self.elements == 1 and self.elements[1]:is(Layout)
+  local hasElements = #self.elements >= 1
 
-  if self.elements then
-    for _, element in ipairs(self.elements) do
-      element:cleanDirtyFlag()
+  if self:is(Layout) then
+    table.insert(self.elements, element)
+    element:setParent(self)
+    if self.parent then
+      self.parent:setDirty()
+    else
+      self:setDirty()
+    end
+
+    self:updateLayout(self:getDimensions())
+    return element
+  end
+
+  if element:is(Layout) then
+    if hasElements then
+      if hasALayout then
+        -- new element is a layout. there is already an layout. new layout is now a child of the existing layout.
+        local currentLayout = self.elements[1]
+        table.insert(currentLayout.elements, element)
+        element:setParent(currentLayout)
+        if self.parent then
+          self.parent:setDirty()
+        else
+          self:setDirty()
+        end
+        currentLayout:updateLayout(self:getDimensions())
+        return element
+      else
+        -- new element is a layout. there is no layout but there are already some elements. layout is now a child of the current container.
+        -- existing elements are now children of the new layout
+        for _, existingElement in ipairs(self.elements) do
+          element:addElement(existingElement)
+          existingElement:setParent(element)
+        end
+        self.elements = {}
+        table.insert(self.elements, element)
+        element:setParent(self)
+        return element
+      end
+    else
+      -- new element is a layout. there are no elements. layout is now a child of the current container
+      table.insert(self.elements, element)
+      element:setParent(self)
+      if self.parent then
+        self.parent:setDirty()
+      else
+        self:setDirty()
+      end
+      element:updateLayout(self:getDimensions())
+      return element
+    end
+  else
+    if hasALayout then
+      -- new element is not a layout. there is already a layout. new element is now a child of the existing layout
+      local currentLayout = self.elements[1]
+      table.insert(currentLayout.elements, element)
+      element:setParent(currentLayout)
+      if self.parent then
+        self.parent:setDirty()
+      else
+        self:setDirty()
+      end
+      currentLayout:updateLayout(self:getDimensions())
+      return element
+    else
+      -- new element is not a layout. there is no layout. new element is now just a child of the current container
+      table.insert(self.elements, element)
+      element:setParent(self)
+      if self.parent then
+        self.parent:setDirty()
+      else
+        self:setDirty()
+      end
+      return element
     end
   end
 end
 
-function Container:addElement(element)
-  table.insert(self.elements, element)
-  element:setParent(self)
-  self:setDirty()
-  return element
+function Container:draw()
+  love.graphics.push("all")
+  love.graphics.setScissor(self.x, self.y, self.width, self.height)
+  love.graphics.translate(self.x, self.y)
+  for _, element in ipairs(self.elements) do
+    element:draw()
+  end
+  love.graphics.pop()
+  self:drawBoundingBox()
 end
 
 --[[
@@ -213,7 +346,11 @@ end
   ******************************************************************
 --]]
 function StackLayout:__toString()
-  return "StackLayout"
+  if self.tag then
+    return "StackLayout [" .. self.tag .. "]"
+  else
+    return "StackLayout"
+  end
 end
 
 function StackLayout:new(horizontal)
@@ -221,40 +358,90 @@ function StackLayout:new(horizontal)
   self.horizontal = horizontal or false
 end
 
-function StackLayout:cleanDirtyFlag()
+-- function StackLayout:setLocation()
+--   local ox, oy = self.parent:getLocation()
+--   local w, h = self.parent:getDimensions()
+--   local elementNumber = 1
+--   if self.parent:is(StackLayout) then
+--     elementNumber = #self.parent.elements or 1
+--   end
 
-  self:setLocation(self.parent:getLocation())
-  self:setDimensions(self.parent:getDimensions())
+--   if self.horizontal then
+--     local chunkSize = self.width / elementNumber
+--     self.x, self.y = chunkSize + ox, oy
+--   else
+--     self.x, self.y = ox, oy + h / elementNumber
+--   end
+-- end
+
+-- function StackLayout:setDimensions()
+--   local w, h = self.parent:getDimensions()
+
+--   local elementNumber = 1
+--   if self.parent:is(StackLayout) then
+--     elementNumber = #self.parent.elements or 1
+--   end
+
+--   if self.horizontal then
+--     local chunkSize = w / elementNumber
+--     self.width, self.height = chunkSize, h / elementNumber
+--   else
+--     self.width, self.height = w, h / elementNumber
+--   end
+
+--   print(self.width, self.height)
+-- end
+
+function StackLayout:updateLayout(parentWidth, parentHeight)
+  -- print((self:__toString() .. " StackLayout:updateLayout"):lpad(50), parentWidth, parentHeight)
+  self:setDimensions(parentWidth, parentHeight)
 
   if self.horizontal then
-    local chunkSize = self.width / #self.elements
-    for _, element in ipairs(self.elements) do
-      element.width = chunkSize
-      element.height = self.height
-      element.x = (_ - 1) * chunkSize
-      elememt.y = 0
+    local chunkSize = self.width / (#self.elements or 1)
+    for _, e in ipairs(self.elements) do
+      e.width = chunkSize
+      e.height = self.height
+      e.x = (_ - 1) * chunkSize
+      e.y = 0
+      -- print(("Element H " .. e:__toString()):lpad(50), e.x, e.y, e.width, e.height)
     end
   else
-    local chunkSize = self.height / #self.elements
-    for _, element in ipairs(self.elements) do
-      element.width = self.width
-      element.height = chunkSize
-      element.x = 0
-      element.y = (_ - 1) * chunkSize
+    local chunkSize = self.height / (#self.elements or 1)
+    for _, e in ipairs(self.elements) do
+      e.width = self.width
+      e.height = chunkSize
+      e.x = 0
+      e.y = (_ - 1) * chunkSize
+      -- print(("Element V " .. e:__toString()):lpad(50), e.x, e.y, e.width, e.height)
     end
   end
-
-  StackLayout.super.cleanDirtyFlag(self)
-
 end
 
-function StackLayout:draw()
-  love.graphics.push("all")
-  for _, element in ipairs(self.elements) do
-    element:draw()
-  end
-  love.graphics.pop()
-  self:drawBoundingBox()
+function StackLayout:cleanDirtyFlag()
+  StackLayout.super.cleanDirtyFlag(self)
+
+  -- self:setDimensions(self.parent:getDimensions())
+  -- self:setLocation(0, 0)
+
+  -- if self.horizontal then
+  --   local chunkSize = self.width / (#self.elements or 1)
+  --   for _, e in ipairs(self.elements) do
+  --     e.width = chunkSize
+  --     e.height = self.height
+  --     e.x = (_ - 1) * chunkSize
+  --     e.y = 0
+  --     print("Element H " .. e:__toString(), e.x, e.y, e.width, e.height, chunkSize)
+  --   end
+  -- else
+  --   local chunkSize = self.height / (#self.elements or 1)
+  --   for _, e in ipairs(self.elements) do
+  --     e.width = self.width
+  --     e.height = chunkSize
+  --     e.x = 0
+  --     e.y = (_ - 1) * chunkSize
+  --     print("Element V " .. e:__toString(), e.x, e.y, e.width, e.height, chunkSize)
+  --   end
+  -- end
 end
 
 --[[
@@ -356,8 +543,6 @@ function UI:new()
   self.font = love.graphics.getFont()
   self.parent = nil
   self.canvas = nil
-  self.x = 0
-  self.y = 0
   self.width, self.height = love.graphics.getDimensions()
   self.visible = true
   self.canvas = love.graphics.newCanvas(self.width, self.height)
@@ -388,7 +573,7 @@ function UI:draw()
   love.graphics.setCanvas()
   love.graphics.draw(self.canvas, self.x, self.y)
   if self.hoveredElement then
-    love.graphics.print("Hovered element: " .. self.hoveredElement:__toString(), 10, 10)
+    love.graphics.print("hovered " .. self.hoveredElement:__toString(), 10, 10)
   end
   love.graphics.pop()
   self:drawBoundingBox()
@@ -448,20 +633,18 @@ function UI:update(dt)
     end
   end
 
-  if foundElement ~= self.hoveredElement then
+  if foundElement and foundElement ~= self.hoveredElement then
     if self.hoveredElement then
       self.hoveredElement:onMouseLeave()
     end
-
     foundElement:onMouseEnter()
-
-    self.hoveredElement = foundElement
-  else
-    if foundElement and (self.mouse.x ~= mx or self.mouse.y ~= my) then
-      foundElement:onMouseMove(mx, my)
-    end
   end
 
+  if foundElement and (self.mouse.x ~= mx or self.mouse.y ~= my) then
+    foundElement:onMouseMove(mx, my)
+  end
+
+  self.hoveredElement = foundElement
   self.mouse.x, self.mouse.y = mx, my
   self.mouse.buttons.left = lb
   self.mouse.buttons.right = rb
@@ -471,5 +654,6 @@ end
 return {
   UI = UI,
   StackLayout = StackLayout,
-  Button = Button
+  Button = Button,
+  Container = Container
 }
