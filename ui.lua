@@ -115,29 +115,36 @@ function Widget:setParent(parent)
   self.parent = parent
 end
 
-function Widget:print(level)
+function Widget:getHierarchyText(level)
   level = level or 0
+  local elements = ""
+  local currentLine = ""
 
   local pad = ""
   for i = 1, level do
     pad = pad .. "-"
   end
   local sx, sy = self:toScreenCoordinates()
-  print(
-    (pad .. self:__toString()):lpad(50),
-    "x: " .. self.x,
-    "y: " .. self.y,
-    "sx: " .. sx,
-    "sy: " .. sy,
-    "w: " .. self.width,
-    "h: " .. self.height
-  )
+
+  if self.tag then
+    currentLine = currentLine .. ((pad .. self:__toString()):lpad(30, ".") .. "[" .. self.tag .. "]"):lpad(50, ".")
+  else
+    currentLine = currentLine .. (pad .. self:__toString()):lpad(50, ".")
+  end
+  currentLine = currentLine .. " |"
+  currentLine = currentLine .. " x:" .. tostring(self.x):rpad(4) .. " y:" .. tostring(self.y):rpad(4) .. " "
+  currentLine = currentLine .. "sx:" .. tostring(sx):rpad(4) .. " sy:" .. tostring(sy):rpad(4) .. " "
+  currentLine = currentLine .. " w:" .. tostring(self.width):rpad(4) .. " h:" .. tostring(self.height):rpad(4)
+  currentLine = currentLine .. "\n"
 
   if self.elements then
     for k, v in pairs(self.elements) do
-      v:print(level + 1)
+      elements = elements .. v:getHierarchyText(level + 1)
     end
   end
+  currentLine = currentLine .. elements
+
+  return currentLine
 end
 
 function Widget:toScreenCoordinates()
@@ -196,9 +203,6 @@ function Container:new(x, y, width, height)
 end
 
 function Container:__toString()
-  if self.tag then
-    return "Container [" .. self.tag .. "]"
-  end
   return "Container"
 end
 
@@ -346,11 +350,7 @@ end
   ******************************************************************
 --]]
 function StackLayout:__toString()
-  if self.tag then
-    return "StackLayout [" .. self.tag .. "]"
-  else
-    return "StackLayout"
-  end
+  return "StackLayout"
 end
 
 function StackLayout:new(horizontal)
@@ -450,9 +450,6 @@ end
   ******************************************************************
 --]]
 function Button:__toString()
-  if self.text then
-    return "Button [" .. self.text .. "]"
-  end
   return "Button"
 end
 
@@ -460,6 +457,8 @@ function Button:new(text, x, y, width, height)
   self.text = text or "Button" -- workaround: __toString would crash because text is nil
 
   Button.super.new(self, x or 0, y or 0, width or 100, height or 20)
+
+  self.tag = self.text
 
   self.textWidth = 0
   self.textHeight = 0
@@ -573,8 +572,14 @@ function UI:draw()
   love.graphics.setCanvas()
   love.graphics.draw(self.canvas, self.x, self.y)
   if self.hoveredElement then
-    love.graphics.print("hovered " .. self.hoveredElement:__toString(), 10, 10)
+    if self.hoveredElement.tag then
+      love.graphics.print("hovered " .. self.hoveredElement:__toString() .. " [" .. self.hoveredElement.tag .. "]", 10, 10)
+    else
+      love.graphics.print("hovered " .. self.hoveredElement:__toString(), 10, 10)
+    end
   end
+  love.graphics.setColor(1, 1, 1, 0.3)
+  love.graphics.print(self:getHierarchyText(), 10, 400)
   love.graphics.pop()
   self:drawBoundingBox()
 end

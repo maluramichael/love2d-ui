@@ -12,10 +12,10 @@ local function makeFont(path)
 end
 
 local Fonts = {
-  default = nil,
-  monospace = makeFont "assets/fonts/ff3.ttf"
+  default = makeFont "assets/fonts/ff3.ttf",
+  monospace = makeFont "assets/fonts/november.ttf"
 }
 
-Fonts.default = Fonts.monospace
+-- Fonts.default = Fonts.monospace
 
 return Fonts

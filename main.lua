@@ -7,6 +7,7 @@ local debugMenu = false
 function love.load()
   -- random
   math.randomseed(os.time())
+  love.mouse.setCursor(love.mouse.newCursor("assets/images/cursor.png", 0, 0))
 
   -- physics
   love.physics.setMeter(16)
@@ -91,7 +92,7 @@ function love.update(dt)
 end
 
 function love.keypressed(key, code, isRepeat)
-  if code == '`' then
+  if code == "`" then
     debugMenu = not debugMenu
   end
 

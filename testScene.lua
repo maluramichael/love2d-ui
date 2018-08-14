@@ -3,7 +3,7 @@ local scene = {}
 -- initialize
 function scene:init()
   self.initialized = false
-  love.graphics.setFont(fonts.monospace[26])
+  love.graphics.setFont(fonts.monospace[16])
   self.ui = UI.UI()
   self.ui.visible = true
 
@@ -21,7 +21,7 @@ function scene:init()
 
   self.ui:addElement(UI.Button("HUGE BUTTON"))
 
-  self.ui:print()
+  print(self.ui:getHierarchyText())
 
   self.initialized = true
 end
