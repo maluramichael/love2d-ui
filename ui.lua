@@ -4,9 +4,12 @@ local Widget = Object:extend()
 local Container = Widget:extend()
 local Layout = Container:extend()
 local Button = Widget:extend()
+local CheckBox = Widget:extend()
+local Label = Widget:extend()
 
 local UI = Container:extend()
 local StackLayout = Layout:extend()
+local ListView = Container:extend()
 
 string.lpad = function(str, len, char)
   if char == nil then
@@ -201,8 +204,8 @@ end
 
 function Widget:drawBoundingBox()
   love.graphics.push("all")
-  love.graphics.setColor(1, 0, 0)
-  love.graphics.setLineWidth(1)
+  love.graphics.setColor(1, 0, 0, 1)
+  love.graphics.setLineWidth(2)
   love.graphics.rectangle("line", self.x, self.y, self.width, self.height)
   love.graphics.pop()
 end
@@ -447,7 +450,125 @@ end
 
 --[[
   ******************************************************************
-  UI
+  ListView
+  ******************************************************************
+--]]
+function ListView:__toString()
+  return "ListView"
+end
+
+function ListView:new(x, y, width, height)
+  ListView.super.new(self, x or 0, y or 0, width or 100, height or 20)
+  self:addElement(StackLayout())
+end
+
+--[[
+  ******************************************************************
+  CheckBox
+  ******************************************************************
+--]]
+function CheckBox:__toString()
+  return "CheckBox"
+end
+
+function CheckBox:new(text, x, y)
+  CheckBox.super.new(self, x or 0, y or 0)
+
+  self.text = text or "CheckBox"
+  self.radius = 8
+  self.padding = 10
+  self.checked = true
+  self:setText(self.text)
+end
+
+function CheckBox:setText(text)
+  self.text = text
+  self:setDirty()
+  self:cleanDirtyFlag()
+end
+
+function CheckBox:onMouseReleased(button, mx, my)
+  CheckBox.super.onMouseReleased(self, button, mx, my)
+  self.checked = not self.checked
+end
+
+function CheckBox:cleanDirtyFlag()
+  CheckBox.super.cleanDirtyFlag(self)
+
+  local currentFont = love.graphics.getFont()
+  self.textWidth, self.textHeight = currentFont:getWidth(self.text), currentFont:getHeight(self.text)
+  self.width = self.textWidth + self.radius * 2 + self.padding
+  self.height = self.textHeight
+  self.isDirty = false
+end
+
+function CheckBox:draw()
+  love.graphics.push("all")
+
+  local currentStyle = self:getStyle()
+
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.setLineWidth(3)
+  if self.checked then
+    love.graphics.circle("fill", self.x + self.radius, self.y + self.radius, self.radius)
+  else
+    love.graphics.circle("line", self.x + self.radius, self.y + self.radius, self.radius)
+  end
+
+  love.graphics.setColor(currentStyle.foreground)
+  love.graphics.print(
+    self.text,
+    self.x + self.radius * 2 + self.padding,
+    self.y + (self.height * 0.5) - (self.textHeight * 0.5)
+  )
+  love.graphics.pop()
+  self:drawBoundingBox()
+end
+
+--[[
+  ******************************************************************
+  Label
+  ******************************************************************
+--]]
+function Label:__toString()
+  return "Label"
+end
+
+function Label:new(text, x, y)
+  Label.super.new(self, x or 0, y or 0)
+
+  self.text = text or "Label"
+  self:setText(self.text)
+end
+
+function Label:setText(text)
+  self.text = text
+  self:setDirty()
+  self:cleanDirtyFlag()
+end
+
+function Label:cleanDirtyFlag()
+  Label.super.cleanDirtyFlag(self)
+
+  local currentFont = love.graphics.getFont()
+  self.textWidth, self.textHeight = currentFont:getWidth(self.text), currentFont:getHeight(self.text)
+  self.width = self.textWidth
+  self.height = self.textHeight
+  self.isDirty = false
+end
+
+function Label:draw()
+  local currentStyle = self:getStyle()
+  love.graphics.push("all")
+  love.graphics.setColor(currentStyle.foreground)
+  love.graphics.print(self.text, self.x, self.y)
+  love.graphics.pop()
+  self:drawBoundingBox()
+end
+
+--[[
+  ******************************************************************
+  Button
   ******************************************************************
 --]]
 function Button:__toString()
@@ -648,5 +769,8 @@ return {
   UI = UI,
   StackLayout = StackLayout,
   Button = Button,
-  Container = Container
+  Container = Container,
+  ListView = ListView,
+  CheckBox = CheckBox,
+  Label = Label
 }

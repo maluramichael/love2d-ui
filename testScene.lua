@@ -7,19 +7,19 @@ function scene:init()
   self.ui = UI.UI()
   self.ui.visible = true
 
-  local stackA = self.ui:addElement(UI.StackLayout(true))
-  local stackB = self.ui:addElement(UI.StackLayout())
-  stackA.tag = "stackA"
-  stackB.tag = "stackB"
+  local container = self.ui:addElement(UI.Container(100, 100, 200, 100))
+  container:addElement(UI.StackLayout())
+  container:addElement(UI.Button("Hello", 30, 50, 100, 50))
+  container:addElement(UI.Button("!!Overflow!!", 200, 120, 200, 50))
 
-  local container = stackB:addElement(UI.Container())
-  local innerContainer = container:addElement(UI.Container(50, 40, 200, 300))
-  container.tag = "container"
-  innerContainer.tag = "inner container"
-  innerContainer:addElement(UI.Button("Hello", 30, 50, 100, 50))
-  innerContainer:addElement(UI.Button("!!Overflow!!", 60, 120, 200, 50))
+  local listView = self.ui:addElement(UI.ListView(400, 150, 200, 100))
+  listView:addElement(UI.Button("Element 1"))
+  listView:addElement(UI.Button("Element 2"))
 
-  self.ui:addElement(UI.Button("HUGE BUTTON"))
+  local checkbox = self.ui:addElement(UI.CheckBox("Check!!!", 200, 350))
+  local label = self.ui:addElement(UI.Label("Label", 200, 380))
+
+  self.ui:addElement(UI.Button("Floating", 350, 50, 100, 50))
 
   print(self.ui:getHierarchyText())
 
@@ -47,6 +47,10 @@ end
 function scene:keypressed(key, scancode, isrepeat)
   if key == "escape" then
     love.event.quit()
+  end
+
+  if key == "r" then
+    love.event.quit("restart")
   end
 end
 
