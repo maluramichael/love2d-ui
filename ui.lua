@@ -368,10 +368,10 @@ end
 function Container:draw()
   local currentStyle = self:getStyle()
   love.graphics.push("all")
-  love.graphics.translate(self.x, self.y)
   love.graphics.setScissor(self.x, self.y, self.width, self.height)
   love.graphics.setColor(currentStyle.background)
-  love.graphics.rectangle("fill", 0, 0, self.width, self.height)
+  love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
+  love.graphics.translate(self.x, self.y)
   for _, element in ipairs(self.elements) do
     element:draw()
   end
@@ -393,42 +393,7 @@ function StackLayout:new(horizontal)
   self.horizontal = horizontal or false
 end
 
--- function StackLayout:setLocation()
---   local ox, oy = self.parent:getLocation()
---   local w, h = self.parent:getDimensions()
---   local elementNumber = 1
---   if self.parent:is(StackLayout) then
---     elementNumber = #self.parent.elements or 1
---   end
-
---   if self.horizontal then
---     local chunkSize = self.width / elementNumber
---     self.x, self.y = chunkSize + ox, oy
---   else
---     self.x, self.y = ox, oy + h / elementNumber
---   end
--- end
-
--- function StackLayout:setDimensions()
---   local w, h = self.parent:getDimensions()
-
---   local elementNumber = 1
---   if self.parent:is(StackLayout) then
---     elementNumber = #self.parent.elements or 1
---   end
-
---   if self.horizontal then
---     local chunkSize = w / elementNumber
---     self.width, self.height = chunkSize, h / elementNumber
---   else
---     self.width, self.height = w, h / elementNumber
---   end
-
---   print(self.width, self.height)
--- end
-
 function StackLayout:updateLayout(parentWidth, parentHeight)
-  -- print((self:__toString() .. " StackLayout:updateLayout"):lpad(50), parentWidth, parentHeight)
   self:setDimensions(parentWidth, parentHeight)
 
   if self.horizontal then
