@@ -39,10 +39,34 @@ function Widget:new(x, y, width, height)
   self.isHovered = false
   self.tag = nil
 
+  self.style = {
+    default = {
+      background = {0.1, 0.1, 0.1},
+      foreground = {1, 1, 1}
+    },
+    hover = {
+      background = {0.3, 0.3, 0.3},
+      foreground = {1, 1, 1}
+    },
+    pressed = {
+      background = {0.5, 0.5, 0.5},
+      foreground = {0, 0, 0}
+    }
+  }
+
   self.actions = {
     pressed = function()
     end
   }
+end
+
+function Widget:getStyle()
+  if self.isPressed then
+    return self.style.pressed
+  elseif self.isHovered then
+    return self.style.hover
+  end
+  return self.style.default
 end
 
 function Widget:__toString()
@@ -50,12 +74,12 @@ function Widget:__toString()
 end
 
 function Widget:onMouseEnter()
-  -- print("onMouseEnter", self:__toString())
+  print("onMouseEnter", self:__toString())
   self.isHovered = true
 end
 
 function Widget:onMouseLeave()
-  -- print("onMouseLeave", self:__toString())
+  print("onMouseLeave", self:__toString())
   self.isHovered = false
   self.isPressed = false
 end
@@ -71,13 +95,13 @@ function Widget:onMouseDown(button, mx, my)
 end
 
 function Widget:onMousePressed(button, mx, my)
-  -- print("onMousePressed", self:__toString(), button, mx, my)
+  print("onMousePressed", self:__toString(), button, mx, my)
   self.isPressed = true
   self.actions.pressed(self, button, mx, my)
 end
 
 function Widget:onMouseReleased(button, mx, my)
-  -- print("onMouseReleased", self:__toString(), button, mx, my)
+  print("onMouseReleased", self:__toString(), button, mx, my)
   self.isPressed = false
 end
 
@@ -147,12 +171,20 @@ function Widget:getHierarchyText(level)
   return currentLine
 end
 
-function Widget:toScreenCoordinates()
+function Widget:toScreenCoordinates(ox, oy)
   if self.parent then
     local sx, sy = self.parent:toScreenCoordinates()
-    return self.x + sx, self.y + sy
+    return self.x + sx + (ox or 0), self.y + sy + (oy or 0)
   end
-  return self.x, self.y
+  return self.x + (ox or 0), self.y + (oy or 0)
+end
+
+function Widget:toObjectCoordinates(ox, oy)
+  if self.parent then
+    local sx, sy = self.parent:toObjectCoordinates()
+    return (ox or 0) - self.x + sx, (oy or 0) - self.y + sy
+  end
+  return (ox or 0) - self.x, (oy or 0) - self.y
 end
 
 function Widget:findElement(mx, my)
@@ -170,7 +202,7 @@ end
 function Widget:drawBoundingBox()
   love.graphics.push("all")
   love.graphics.setColor(1, 0, 0)
-  love.graphics.setLineWidth(3)
+  love.graphics.setLineWidth(1)
   love.graphics.rectangle("line", self.x, self.y, self.width, self.height)
   love.graphics.pop()
 end
@@ -334,9 +366,12 @@ function Container:addElement(element)
 end
 
 function Container:draw()
+  local currentStyle = self:getStyle()
   love.graphics.push("all")
-  love.graphics.setScissor(self.x, self.y, self.width, self.height)
   love.graphics.translate(self.x, self.y)
+  love.graphics.setScissor(self.x, self.y, self.width, self.height)
+  love.graphics.setColor(currentStyle.background)
+  love.graphics.rectangle("fill", 0, 0, self.width, self.height)
   for _, element in ipairs(self.elements) do
     element:draw()
   end
@@ -467,19 +502,6 @@ function Button:new(text, x, y, width, height)
   self.pressed = nil
   self.down = nil
   self.released = nil
-  -- style
-  self.style = {
-    background = {0, 0, 0},
-    text = {1, 1, 1}
-  }
-  self.hoverStyle = {
-    background = {0.2, 0.2, 0.2},
-    text = {1, 1, 1}
-  }
-  self.pressedStyle = {
-    background = {0.4, 0.3, 0.2},
-    text = {1, 1, 1}
-  }
 
   self:setText(self.text)
 end
@@ -501,22 +523,12 @@ end
 function Button:draw()
   love.graphics.push("all")
 
-  if self.isPressed then
-    love.graphics.setColor(self.pressedStyle.background)
-  elseif self.isHovered then
-    love.graphics.setColor(self.hoverStyle.background)
-  else
-    love.graphics.setColor(self.style.background)
-  end
+  local currentStyle = self:getStyle()
+
+  love.graphics.setColor(currentStyle.background)
   love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
 
-  if self.isHovered then
-    love.graphics.setColor(self.hoverStyle.text)
-  elseif self.isPressed then
-    love.graphics.setColor(self.pressedStyle.text)
-  else
-    love.graphics.setColor(self.style.text)
-  end
+  love.graphics.setColor(currentStyle.foreground)
   love.graphics.print(
     self.text,
     self.x + (self.width * 0.5) - (self.textWidth * 0.5),
@@ -562,6 +574,7 @@ function UI:draw()
   if not self.visible then
     return
   end
+
   love.graphics.push("all")
   love.graphics.setCanvas(self.canvas)
   love.graphics.clear(1, 1, 1, 0)
@@ -573,11 +586,20 @@ function UI:draw()
   love.graphics.draw(self.canvas, self.x, self.y)
   if self.hoveredElement then
     if self.hoveredElement.tag then
-      love.graphics.print("hovered " .. self.hoveredElement:__toString() .. " [" .. self.hoveredElement.tag .. "]", 10, 10)
+      love.graphics.print(
+        "hovered " .. self.hoveredElement:__toString() .. " [" .. self.hoveredElement.tag .. "]",
+        10,
+        10
+      )
     else
       love.graphics.print("hovered " .. self.hoveredElement:__toString(), 10, 10)
     end
+    local sx, sy = self.hoveredElement:toObjectCoordinates(self.mouse.x, self.mouse.y)
+    love.graphics.print("mouse " .. string.format("%4d %4d %4d %4d", self.mouse.x, self.mouse.y, sx, sy), 10, 30)
+  else
+    love.graphics.print("mouse " .. string.format("%4d %4d", self.mouse.x, self.mouse.y), 10, 30)
   end
+
   love.graphics.setColor(1, 1, 1, 0.3)
   love.graphics.print(self:getHierarchyText(), 10, 400)
   love.graphics.pop()
