@@ -367,8 +367,9 @@ end
 
 function Container:draw()
   local currentStyle = self:getStyle()
+  local sx, sy = self:toScreenCoordinates()
   love.graphics.push("all")
-  love.graphics.setScissor(self.x, self.y, self.width, self.height)
+  love.graphics.setScissor(sx, sy, self.width, self.height)
   love.graphics.setColor(currentStyle.background)
   love.graphics.rectangle("fill", self.x, self.y, self.width, self.height)
   love.graphics.translate(self.x, self.y)
