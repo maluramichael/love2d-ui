@@ -380,7 +380,7 @@ function Container:draw()
     element:draw()
   end
   love.graphics.pop()
-  self:drawBoundingBox()
+  -- self:drawBoundingBox()
 end
 
 --[[
@@ -522,7 +522,7 @@ function CheckBox:draw()
     self.y + (self.height * 0.5) - (self.textHeight * 0.5)
   )
   love.graphics.pop()
-  self:drawBoundingBox()
+  -- self:drawBoundingBox()
 end
 
 --[[
@@ -563,7 +563,7 @@ function Label:draw()
   love.graphics.setColor(currentStyle.foreground)
   love.graphics.print(self.text, self.x, self.y)
   love.graphics.pop()
-  self:drawBoundingBox()
+  -- self:drawBoundingBox()
 end
 
 --[[
@@ -622,7 +622,7 @@ function Button:draw()
     self.y + (self.height * 0.5) - (self.textHeight * 0.5)
   )
   love.graphics.pop()
-  self:drawBoundingBox()
+  -- self:drawBoundingBox()
 end
 
 --[[
@@ -688,9 +688,9 @@ function UI:draw()
   end
 
   love.graphics.setColor(1, 1, 1, 0.3)
-  love.graphics.print(self:getHierarchyText(), 10, 400)
+  love.graphics.print(self:getHierarchyText(), 10, 550)
   love.graphics.pop()
-  self:drawBoundingBox()
+  -- self:drawBoundingBox()
 end
 
 function UI:update(dt)
